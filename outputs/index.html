@@ -26,6 +26,36 @@
       font-size: 14px;
       line-height: 1.6;
     }
+    .sync-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 24px;
+      padding: 12px 14px;
+      border: 1px solid #d0d5dd;
+      border-radius: 8px;
+      background: #ffffff;
+    }
+    .sync-status {
+      flex: 1 1 240px;
+      color: #475467;
+      font-size: 14px;
+    }
+    .sync-button {
+      min-height: 38px;
+      padding: 8px 14px;
+      border: 1px solid #98a2b3;
+      border-radius: 6px;
+      color: #101828;
+      background: #ffffff;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .sync-button:hover {
+      background: #f2f4f7;
+    }
     section {
       margin-top: 18px;
       background: #ffffff;
@@ -96,6 +126,10 @@
       게시물: G1 MWF 4000 6월 10일 과제입니다.<br>
       과목: Vocabulary / 과제마감일: 2026-06-17
     </p>
+    <div class="sync-bar">
+      <span class="sync-status" id="sync-status">Google 로그인 후 체크 상태가 모든 기기에 동기화됩니다.</span>
+      <button class="sync-button" id="auth-button" type="button">Google 로그인</button>
+    </div>
 
     <section>
       <h2>6월 12일 금요일까지</h2>
@@ -255,5 +289,122 @@
       </ul>
     </section>
   </main>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+    import {
+      getAuth,
+      GoogleAuthProvider,
+      onAuthStateChanged,
+      signInWithPopup,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+    import {
+      doc,
+      getFirestore,
+      onSnapshot,
+      serverTimestamp,
+      setDoc
+    } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA1dLWxbELsWv1X4L0BBAO1vbV8TMddHTM",
+      authDomain: "dux-homework.firebaseapp.com",
+      projectId: "dux-homework",
+      storageBucket: "dux-homework.firebasestorage.app",
+      messagingSenderId: "391604878081",
+      appId: "1:391604878081:web:3343a4545d9e7abb2b3900"
+    };
+
+    const allowedEmail = "didtjrud00@gmail.com";
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
+    const status = document.querySelector("#sync-status");
+    const authButton = document.querySelector("#auth-button");
+    const checkboxes = Array.from(document.querySelectorAll('input[type="checkbox"]'));
+    const checklistRef = doc(db, "checklists", "current");
+    let currentState = {};
+    let unsubscribe = null;
+    let applyingRemoteState = false;
+
+    const keyFor = (checkbox, index) => {
+      const label = checkbox.getAttribute("aria-label") || `item-${index + 1}`;
+      return `${index + 1}:${label}`;
+    };
+
+    checkboxes.forEach((checkbox, index) => {
+      checkbox.dataset.syncKey = keyFor(checkbox, index);
+      checkbox.disabled = true;
+      checkbox.addEventListener("change", async () => {
+        if (!auth.currentUser || applyingRemoteState) return;
+        currentState[checkbox.dataset.syncKey] = checkbox.checked;
+        status.textContent = "저장 중...";
+        try {
+          await setDoc(checklistRef, {
+            items: currentState,
+            updatedAt: serverTimestamp(),
+            updatedBy: auth.currentUser.email
+          }, { merge: true });
+          status.textContent = "체크 상태가 저장되었습니다.";
+        } catch (error) {
+          status.textContent = "저장에 실패했습니다. 다시 로그인해 주세요.";
+        }
+      });
+    });
+
+    authButton.addEventListener("click", async () => {
+      if (auth.currentUser) {
+        await signOut(auth);
+        return;
+      }
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (error) {
+        status.textContent = "Google 로그인을 완료하지 못했습니다.";
+      }
+    });
+
+    onAuthStateChanged(auth, (user) => {
+      if (unsubscribe) {
+        unsubscribe();
+        unsubscribe = null;
+      }
+
+      if (!user) {
+        authButton.textContent = "Google 로그인";
+        status.textContent = "Google 로그인 후 체크 상태가 모든 기기에 동기화됩니다.";
+        checkboxes.forEach((checkbox) => {
+          checkbox.disabled = true;
+          checkbox.checked = false;
+        });
+        return;
+      }
+
+      if (user.email !== allowedEmail) {
+        status.textContent = "허용된 Google 계정이 아닙니다.";
+        signOut(auth);
+        return;
+      }
+
+      authButton.textContent = "로그아웃";
+      status.textContent = "체크 상태를 불러오는 중...";
+      checkboxes.forEach((checkbox) => {
+        checkbox.disabled = false;
+      });
+
+      unsubscribe = onSnapshot(checklistRef, (snapshot) => {
+        currentState = snapshot.exists() ? (snapshot.data().items || {}) : {};
+        applyingRemoteState = true;
+        checkboxes.forEach((checkbox) => {
+          checkbox.checked = Boolean(currentState[checkbox.dataset.syncKey]);
+        });
+        applyingRemoteState = false;
+        status.textContent = "모든 기기와 동기화되었습니다.";
+      }, () => {
+        status.textContent = "동기화에 실패했습니다. Firebase 설정을 확인해 주세요.";
+      });
+    });
+  </script>
 </body>
 </html>
