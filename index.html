@@ -296,6 +296,7 @@
       GoogleAuthProvider,
       getRedirectResult,
       onAuthStateChanged,
+      signInWithPopup,
       signInWithRedirect,
       signOut
     } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
@@ -360,8 +361,12 @@
         return;
       }
       try {
-        await signInWithRedirect(auth, provider);
+        await signInWithPopup(auth, provider);
       } catch (error) {
+        if (error.code === "auth/popup-blocked") {
+          await signInWithRedirect(auth, provider);
+          return;
+        }
         status.textContent = "Google 로그인을 완료하지 못했습니다.";
       }
     });
