@@ -326,6 +326,7 @@
     const authButton = document.querySelector("#auth-button");
     const checkboxes = Array.from(document.querySelectorAll('input[type="checkbox"]'));
     const checklistRef = doc(db, "checklists", "current");
+    const localStorageKey = "dux-homework-checklist";
     let currentState = {};
     let unsubscribe = null;
     let applyingRemoteState = false;
@@ -335,12 +336,30 @@
       return `${index + 1}:${label}`;
     };
 
+    const saveLocalState = () => {
+      localStorage.setItem(localStorageKey, JSON.stringify(currentState));
+    };
+
+    const loadLocalState = () => {
+      try {
+        return JSON.parse(localStorage.getItem(localStorageKey) || "{}");
+      } catch {
+        return {};
+      }
+    };
+
+    currentState = loadLocalState();
     checkboxes.forEach((checkbox, index) => {
       checkbox.dataset.syncKey = keyFor(checkbox, index);
-      checkbox.disabled = true;
+      checkbox.checked = Boolean(currentState[checkbox.dataset.syncKey]);
       checkbox.addEventListener("change", async () => {
-        if (!auth.currentUser || applyingRemoteState) return;
+        if (applyingRemoteState) return;
         currentState[checkbox.dataset.syncKey] = checkbox.checked;
+        saveLocalState();
+        if (!auth.currentUser) {
+          status.textContent = "이 기기에 저장되었습니다. 로그인하면 모든 기기와 동기화됩니다.";
+          return;
+        }
         status.textContent = "저장 중...";
         try {
           await setDoc(checklistRef, {
@@ -384,9 +403,9 @@
       if (!user) {
         authButton.textContent = "Google 로그인";
         status.textContent = "Google 로그인 후 체크 상태가 모든 기기에 동기화됩니다.";
+        currentState = loadLocalState();
         checkboxes.forEach((checkbox) => {
-          checkbox.disabled = true;
-          checkbox.checked = false;
+          checkbox.checked = Boolean(currentState[checkbox.dataset.syncKey]);
         });
         return;
       }
@@ -399,18 +418,24 @@
 
       authButton.textContent = "로그아웃";
       status.textContent = "체크 상태를 불러오는 중...";
-      checkboxes.forEach((checkbox) => {
-        checkbox.disabled = false;
-      });
 
       unsubscribe = onSnapshot(checklistRef, (snapshot) => {
-        currentState = snapshot.exists() ? (snapshot.data().items || {}) : {};
+        const remoteState = snapshot.exists() ? (snapshot.data().items || {}) : {};
+        currentState = { ...loadLocalState(), ...remoteState };
+        saveLocalState();
         applyingRemoteState = true;
         checkboxes.forEach((checkbox) => {
           checkbox.checked = Boolean(currentState[checkbox.dataset.syncKey]);
         });
         applyingRemoteState = false;
         status.textContent = "모든 기기와 동기화되었습니다.";
+        if (!snapshot.exists() && Object.keys(currentState).length) {
+          setDoc(checklistRef, {
+            items: currentState,
+            updatedAt: serverTimestamp(),
+            updatedBy: user.email
+          }, { merge: true });
+        }
       }, () => {
         status.textContent = "동기화에 실패했습니다. Firebase 설정을 확인해 주세요.";
       });
