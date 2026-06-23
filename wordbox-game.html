@@ -1,0 +1,687 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wordbox Listening Game</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #2f3140;
+      --muted: #75798c;
+      --line: #f0c7d6;
+      --paper: #fffafd;
+      --cream: #fff7de;
+      --mint: #d9f5ed;
+      --pink: #ff7ea8;
+      --pink-dark: #e85c8b;
+      --blue: #5a8dee;
+      --green: #27845d;
+      --red: #c83e4d;
+      --shadow: 0 18px 44px rgba(143, 78, 111, .18);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, "Noto Sans KR", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 10% 14%, rgba(255, 126, 168, .22) 0 90px, transparent 92px),
+        radial-gradient(circle at 90% 8%, rgba(90, 141, 238, .18) 0 110px, transparent 112px),
+        linear-gradient(135deg, #fff3d8 0%, #ffeef7 48%, #edf8ff 100%);
+    }
+
+    main {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 24px 0 34px;
+    }
+
+    header {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 46px);
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 9px 0 0;
+      color: var(--muted);
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(82px, 1fr));
+      gap: 9px;
+      min-width: min(370px, 100%);
+    }
+
+    .stat {
+      border: 2px solid #fff;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, .78);
+      box-shadow: 0 8px 22px rgba(143, 78, 111, .12);
+      padding: 11px;
+      text-align: center;
+    }
+
+    .stat b {
+      display: block;
+      font-size: 21px;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 340px;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .panel {
+      border: 2px solid #fff;
+      border-radius: 24px;
+      background: rgba(255, 250, 253, .92);
+      box-shadow: var(--shadow);
+    }
+
+    .question {
+      padding: 22px;
+      min-height: 390px;
+      display: grid;
+      align-content: start;
+      gap: 16px;
+    }
+
+    .tag {
+      width: fit-content;
+      border-radius: 999px;
+      background: var(--mint);
+      color: #27715e;
+      padding: 8px 13px;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .listen-card {
+      display: grid;
+      place-items: center;
+      gap: 14px;
+      min-height: 150px;
+      border: 2px dashed #ffc0d6;
+      border-radius: 22px;
+      background: linear-gradient(180deg, #fff, var(--cream));
+      text-align: center;
+      padding: 18px;
+    }
+
+    .listen-title {
+      margin: 0;
+      font-size: clamp(24px, 4vw, 38px);
+      line-height: 1.16;
+      font-weight: 900;
+    }
+
+    .sound-button {
+      min-width: 170px;
+      min-height: 58px;
+      border: 0;
+      border-radius: 999px;
+      background: var(--pink);
+      color: #fff;
+      box-shadow: 0 10px 18px rgba(232, 92, 139, .28);
+      font-size: 18px;
+    }
+
+    .sound-button:hover:not(:disabled) {
+      background: var(--pink-dark);
+    }
+
+    .definition {
+      display: none;
+      margin: 0;
+      border: 2px solid #ffe1ec;
+      border-radius: 18px;
+      background: #fff;
+      padding: 14px 16px;
+      font-size: clamp(18px, 3vw, 25px);
+      line-height: 1.32;
+      font-weight: 800;
+    }
+
+    .definition.show {
+      display: block;
+    }
+
+    .helper {
+      min-height: 29px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.45;
+      font-weight: 700;
+    }
+
+    .helper.good {
+      color: var(--green);
+    }
+
+    .helper.bad {
+      color: var(--red);
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-top: auto;
+    }
+
+    button {
+      appearance: none;
+      border: 2px solid #f2d4df;
+      border-radius: 16px;
+      background: #fff;
+      color: var(--ink);
+      min-height: 44px;
+      padding: 0 14px;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform .12s ease, border-color .12s ease, background .12s ease;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      border-color: #ff9fbe;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: .54;
+    }
+
+    .primary {
+      background: var(--blue);
+      border-color: var(--blue);
+      color: #fff;
+    }
+
+    .wordbox {
+      padding: 15px;
+    }
+
+    .wordbox h2 {
+      margin: 2px 0 4px;
+      font-size: 20px;
+    }
+
+    .wordbox-note {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .words {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 9px;
+    }
+
+    .word {
+      min-height: 45px;
+      padding: 6px 8px;
+      overflow-wrap: anywhere;
+      background: #fff;
+    }
+
+    .word.correct {
+      background: #e7f8ef;
+      border-color: #7bca9e;
+      color: var(--green);
+    }
+
+    .word.wrong {
+      background: #fff0f2;
+      border-color: #ff9fac;
+      color: var(--red);
+    }
+
+    .progress {
+      width: 100%;
+      height: 12px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #f5dce6;
+    }
+
+    .bar {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--pink), #ffd166, var(--blue));
+      transition: width .2s ease;
+    }
+
+    .review-list {
+      display: none;
+      margin: 0;
+      padding-left: 20px;
+      color: var(--muted);
+      line-height: 1.55;
+      font-weight: 700;
+    }
+
+    .review-list.show {
+      display: block;
+    }
+
+    @media (max-width: 820px) {
+      header {
+        display: block;
+      }
+
+      .stats {
+        margin-top: 14px;
+      }
+
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .words {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 560px) {
+      main {
+        width: min(100% - 20px, 1120px);
+        padding-top: 14px;
+      }
+
+      .stats {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .question {
+        padding: 15px;
+      }
+
+      .words {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>Wordbox Listening</h1>
+        <p class="subtitle">definition을 듣고 wordbox에서 알맞은 단어를 고르세요.</p>
+      </div>
+      <div class="stats" aria-label="game stats">
+        <div class="stat"><b id="roundText">1/5</b><span>게임</span></div>
+        <div class="stat"><b id="scoreText">0</b><span>맞힌 개수</span></div>
+        <div class="stat"><b id="leftText">10</b><span>남은 문제</span></div>
+      </div>
+    </header>
+
+    <div class="layout">
+      <section class="panel question" aria-live="polite">
+        <div class="progress" aria-hidden="true"><div class="bar" id="bar"></div></div>
+        <span class="tag" id="modeText">10문항 게임</span>
+        <div class="listen-card">
+          <p class="listen-title" id="listenTitle">소리를 듣고 맞혀 보세요</p>
+          <button class="sound-button" id="soundBtn" type="button">definition 듣기</button>
+        </div>
+        <p class="definition" id="definitionText"></p>
+        <p class="helper" id="helperText">재생 버튼을 누른 뒤 정답을 고르세요.</p>
+        <ol class="review-list" id="reviewList"></ol>
+        <div class="controls">
+          <button class="primary" id="nextBtn" type="button" disabled>다음 문제</button>
+          <button id="restartBtn" type="button" hidden>게임 재시작</button>
+        </div>
+      </section>
+
+      <aside class="panel wordbox">
+        <h2>Wordbox</h2>
+        <p class="wordbox-note">선택지는 매 문제 10개 이하입니다.</p>
+        <div class="words" id="wordBox"></div>
+      </aside>
+    </div>
+  </main>
+
+  <script>
+    const vocabulary = [
+      { word: "sow", part: "v", definition: "to plant something in or over the ground" },
+      { word: "international", part: "adj", definition: "of or having to do with two or more countries" },
+      { word: "national", part: "adj", definition: "of or having to do with the whole country, not just one part of it" },
+      { word: "local", part: "adj", definition: "having to do with a particular place such as a neighborhood or town" },
+      { word: "obey", part: "v", definition: "to do what someone tells you to do" },
+      { word: "nation", part: "n", definition: "a country made up of people living under their own government" },
+      { word: "clever", part: "adj", definition: "having a wise mind; smart" },
+      { word: "accident", part: "n", definition: "an event that happens by chance, especially a harmful one" },
+      { word: "agree", part: "v", definition: "to have the same opinion or feel the same way" },
+      { word: "join", part: "v", definition: "to put, bring, or fasten together" },
+      { word: "shiver", part: "v", definition: "to shake because of cold or fear" },
+      { word: "government", part: "n", definition: "the group of people that has power to make laws and important decisions for a community, state, or nation" },
+      { word: "arson", part: "n", definition: "the crime of burning buildings on purpose" },
+      { word: "financial", part: "adj", definition: "having to do with money" },
+      { word: "term", part: "n", definition: "a period of time during which something happens" },
+      { word: "reason", part: "n", definition: "a cause or explanation for an action, opinion, or event" },
+      { word: "away", part: "adv", definition: "in another direction or to another place" },
+      { word: "careful", part: "adj", definition: "taking care in one's actions; cautious" },
+      { word: "available", part: "adj", definition: "able to be used or possible to get" },
+      { word: "ill", part: "adj", definition: "not healthy; sick" }
+    ];
+
+    const state = {
+      round: 1,
+      maxRounds: 5,
+      questionsPerRound: 10,
+      choiceLimit: 10,
+      mode: "normal",
+      questions: [],
+      currentIndex: 0,
+      score: 0,
+      wrongWords: new Map(),
+      answered: false
+    };
+
+    const els = {
+      roundText: document.getElementById("roundText"),
+      scoreText: document.getElementById("scoreText"),
+      leftText: document.getElementById("leftText"),
+      modeText: document.getElementById("modeText"),
+      listenTitle: document.getElementById("listenTitle"),
+      definitionText: document.getElementById("definitionText"),
+      helperText: document.getElementById("helperText"),
+      soundBtn: document.getElementById("soundBtn"),
+      wordBox: document.getElementById("wordBox"),
+      nextBtn: document.getElementById("nextBtn"),
+      restartBtn: document.getElementById("restartBtn"),
+      bar: document.getElementById("bar"),
+      reviewList: document.getElementById("reviewList")
+    };
+
+    function shuffle(items) {
+      const copy = [...items];
+      for (let i = copy.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function withChoices(question) {
+      const distractors = vocabulary.filter(item => item.word !== question.word);
+      const choices = shuffle([question, ...shuffle(distractors).slice(0, state.choiceLimit - 1)]);
+      return { ...question, choices };
+    }
+
+    function makeQuestions(source) {
+      return shuffle(source).slice(0, state.questionsPerRound).map(withChoices);
+    }
+
+    function speakDefinition() {
+      const q = currentQuestion();
+      if (!q || !("speechSynthesis" in window)) {
+        els.helperText.textContent = "이 브라우저에서는 음성 재생이 지원되지 않습니다. 답을 고르면 definition을 볼 수 있습니다.";
+        return;
+      }
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(q.definition);
+      utterance.lang = "en-US";
+      utterance.rate = 0.82;
+      utterance.pitch = 1.08;
+      window.speechSynthesis.speak(utterance);
+      els.helperText.textContent = "들은 definition과 맞는 단어를 골라 보세요.";
+      els.helperText.className = "helper";
+    }
+
+    function startRound() {
+      state.mode = "normal";
+      state.questions = makeQuestions(vocabulary);
+      state.currentIndex = 0;
+      state.score = 0;
+      state.answered = false;
+      els.restartBtn.hidden = true;
+      els.nextBtn.hidden = false;
+      els.soundBtn.hidden = false;
+      els.reviewList.classList.remove("show");
+      els.reviewList.innerHTML = "";
+      renderQuestion();
+    }
+
+    function startReview() {
+      const missed = [...state.wrongWords.values()];
+      state.mode = "review";
+      state.questions = makeQuestions(missed);
+      state.currentIndex = 0;
+      state.score = 0;
+      state.answered = false;
+      els.restartBtn.hidden = true;
+      els.nextBtn.hidden = false;
+      els.soundBtn.hidden = false;
+      els.reviewList.classList.remove("show");
+      els.reviewList.innerHTML = "";
+      if (state.questions.length === 0) {
+        showPerfectEnding();
+      } else {
+        renderQuestion();
+      }
+    }
+
+    function currentQuestion() {
+      return state.questions[state.currentIndex];
+    }
+
+    function renderStats() {
+      const total = state.questions.length || state.questionsPerRound;
+      const left = Math.max(total - state.currentIndex, 0);
+      els.roundText.textContent = state.mode === "review" ? "복습" : `${state.round}/${state.maxRounds}`;
+      els.scoreText.textContent = state.score;
+      els.leftText.textContent = left;
+      els.bar.style.width = `${Math.min((state.currentIndex / total) * 100, 100)}%`;
+      els.modeText.textContent = state.mode === "review" ? "틀린 단어 복습" : "10문항 게임";
+    }
+
+    function renderQuestion() {
+      const q = currentQuestion();
+      state.answered = false;
+      window.speechSynthesis?.cancel();
+      renderStats();
+      els.listenTitle.textContent = "소리를 듣고 맞혀 보세요";
+      els.definitionText.textContent = "";
+      els.definitionText.classList.remove("show");
+      els.helperText.textContent = `품사 힌트: ${q.part}. definition 듣기 버튼을 눌러 주세요.`;
+      els.helperText.className = "helper";
+      els.nextBtn.disabled = true;
+      renderWordBox();
+    }
+
+    function renderWordBox(selectedWord = "", wasCorrect = false) {
+      const q = currentQuestion();
+      els.wordBox.innerHTML = "";
+      q.choices.forEach(item => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "word";
+        button.textContent = item.word;
+        button.disabled = state.answered;
+        if (state.answered && item.word === q.word) button.classList.add("correct");
+        if (state.answered && item.word === selectedWord && !wasCorrect) button.classList.add("wrong");
+        button.addEventListener("click", () => chooseWord(item.word));
+        els.wordBox.append(button);
+      });
+    }
+
+    function revealDefinition(q) {
+      els.definitionText.textContent = `Definition: ${q.definition}`;
+      els.definitionText.classList.add("show");
+    }
+
+    function chooseWord(word) {
+      if (state.answered) return;
+      const q = currentQuestion();
+      const correct = word === q.word;
+      state.answered = true;
+      window.speechSynthesis?.cancel();
+      revealDefinition(q);
+      if (correct) {
+        state.score += 1;
+        if (state.mode === "review") state.wrongWords.delete(q.word);
+        els.listenTitle.textContent = `정답: ${q.word}`;
+        els.helperText.textContent = "맞았어요. definition을 다시 확인해 보세요.";
+        els.helperText.className = "helper good";
+      } else {
+        state.wrongWords.set(q.word, q);
+        els.listenTitle.textContent = `정답: ${q.word}`;
+        els.helperText.textContent = `아쉬워요. 선택한 단어는 ${word} 입니다.`;
+        els.helperText.className = "helper bad";
+      }
+      els.nextBtn.disabled = false;
+      renderWordBox(word, correct);
+      renderStats();
+    }
+
+    function nextQuestion() {
+      state.currentIndex += 1;
+      if (state.currentIndex >= state.questions.length) {
+        finishSet();
+      } else {
+        renderQuestion();
+      }
+    }
+
+    function finishSet() {
+      window.speechSynthesis?.cancel();
+      els.bar.style.width = "100%";
+      els.wordBox.querySelectorAll("button").forEach(button => {
+        button.disabled = true;
+      });
+      els.nextBtn.hidden = true;
+      els.soundBtn.hidden = true;
+
+      if (state.mode === "review") {
+        showReviewEnding();
+        return;
+      }
+
+      els.listenTitle.textContent = `이번 게임 점수: ${state.score}/${state.questions.length}`;
+      els.definitionText.classList.remove("show");
+      els.helperText.className = "helper";
+      if (state.round < state.maxRounds) {
+        els.helperText.textContent = `${state.maxRounds}번 중 ${state.round}번을 마쳤습니다. 재시작하면 새 10문항이 나옵니다.`;
+        els.restartBtn.textContent = "게임 재시작";
+        els.restartBtn.hidden = false;
+      } else if (state.wrongWords.size === 0) {
+        showPerfectEnding();
+      } else {
+        els.helperText.textContent = "5번의 게임이 끝났습니다. 이제 틀린 단어만 모아서 다시 풀어봅니다.";
+        els.restartBtn.textContent = "틀린 단어 복습 시작";
+        els.restartBtn.hidden = false;
+      }
+      renderStats();
+      showMissedList();
+    }
+
+    function restartOrReview() {
+      if (state.mode === "review") {
+        startReview();
+        return;
+      }
+      if (state.round < state.maxRounds) {
+        state.round += 1;
+        startRound();
+      } else {
+        startReview();
+      }
+    }
+
+    function showMissedList() {
+      const missed = [...state.wrongWords.values()];
+      els.reviewList.innerHTML = "";
+      missed.forEach(item => {
+        const li = document.createElement("li");
+        li.textContent = `${item.word}: ${item.definition}`;
+        els.reviewList.append(li);
+      });
+      els.reviewList.classList.toggle("show", missed.length > 0);
+    }
+
+    function showReviewEnding() {
+      const remaining = [...state.wrongWords.values()];
+      els.listenTitle.textContent = remaining.length === 0 ? "복습 완료!" : `아직 남은 오답: ${remaining.length}개`;
+      els.definitionText.classList.remove("show");
+      els.helperText.className = remaining.length === 0 ? "helper good" : "helper bad";
+      els.helperText.textContent = remaining.length === 0
+        ? "틀린 단어를 모두 다시 맞혔습니다."
+        : "남은 단어만 다시 복습할 수 있습니다.";
+      els.restartBtn.textContent = remaining.length === 0 ? "처음부터 새 게임" : "남은 오답 다시 풀기";
+      els.restartBtn.hidden = false;
+      if (remaining.length === 0) {
+        state.round = 1;
+        state.wrongWords.clear();
+      }
+      renderStats();
+      showMissedList();
+    }
+
+    function showPerfectEnding() {
+      els.listenTitle.textContent = "완벽해요!";
+      els.definitionText.classList.remove("show");
+      els.helperText.textContent = "5번의 게임 동안 복습할 오답이 없습니다.";
+      els.helperText.className = "helper good";
+      els.nextBtn.hidden = true;
+      els.soundBtn.hidden = true;
+      els.restartBtn.textContent = "처음부터 새 게임";
+      els.restartBtn.hidden = false;
+      renderStats();
+    }
+
+    function resetAll() {
+      state.round = 1;
+      state.wrongWords.clear();
+      startRound();
+    }
+
+    els.soundBtn.addEventListener("click", speakDefinition);
+    els.nextBtn.addEventListener("click", nextQuestion);
+    els.restartBtn.addEventListener("click", () => {
+      if (state.mode === "review" && state.wrongWords.size === 0) {
+        resetAll();
+      } else if (state.mode === "normal" && state.round === state.maxRounds && state.wrongWords.size === 0) {
+        resetAll();
+      } else {
+        restartOrReview();
+      }
+    });
+
+    startRound();
+  </script>
+</body>
+</html>
