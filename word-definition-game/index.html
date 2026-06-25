@@ -669,7 +669,7 @@
       } else {
         button.classList.add("wrong");
         if (state.mode === "game") state.wrongMap.set(state.current.word, state.current);
-        els.feedback.innerHTML = `<strong>아쉬워요.</strong> 정답은 <strong>${state.current.word}</strong> 입니다.`;
+        els.feedback.innerHTML = `<strong>아쉬워요.</strong> 정답은 <strong>${state.current.word}</strong> (${state.current.part}) 입니다. ${state.current.definition}`;
       }
 
       els.nextBtn.disabled = false;
